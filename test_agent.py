@@ -2,23 +2,16 @@
 Unit tests for CodeIterAgent.
 
 These tests mock the Anthropic client so they run without an API key and
-without using any tokens. They verify the write -> run -> fix -> repeat
-loop logic itself: code extraction, sandbox execution, retry-on-error,
-test-case validation, and the max-iteration give-up path.
+without using any tokens.
 """
 
-import sys
-import os
 import unittest
 from unittest.mock import patch, MagicMock
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-
-from codeiter.agent import CodeIterAgent
+from agent import CodeIterAgent
 
 
 def fake_response(text: str):
-    """Build an object shaped like the Anthropic SDK response."""
     block = MagicMock()
     block.text = text
     response = MagicMock()
@@ -28,7 +21,7 @@ def fake_response(text: str):
 
 class TestExtractCode(unittest.TestCase):
     def setUp(self):
-        with patch("codeiter.agent.Anthropic"):
+        with patch("agent.Anthropic"):
             self.agent = CodeIterAgent()
 
     def test_extract_python_fenced_block(self):
@@ -46,9 +39,7 @@ class TestExtractCode(unittest.TestCase):
 
 class TestRunLoop(unittest.TestCase):
     def _agent(self, responses):
-        """Create an agent whose client.messages.create returns each
-        response in `responses` in order, one per call."""
-        with patch("codeiter.agent.Anthropic"):
+        with patch("agent.Anthropic"):
             agent = CodeIterAgent(max_iterations=5, timeout=5)
         agent.client.messages.create = MagicMock(
             side_effect=[fake_response(r) for r in responses]
@@ -58,9 +49,7 @@ class TestRunLoop(unittest.TestCase):
     def test_succeeds_on_first_try(self):
         code = "```python\nprint('hello')\n```"
         agent = self._agent([code])
-
         result = agent.run("print hello")
-
         self.assertTrue(result.success)
         self.assertEqual(len(result.attempts), 1)
         self.assertEqual(result.attempts[0].reason, "passed")
@@ -70,9 +59,7 @@ class TestRunLoop(unittest.TestCase):
         broken = "```python\nprint(undefined_variable)\n```"
         fixed = "```python\nprint('fixed')\n```"
         agent = self._agent([broken, fixed])
-
         result = agent.run("print something")
-
         self.assertTrue(result.success)
         self.assertEqual(len(result.attempts), 2)
         self.assertEqual(result.attempts[0].reason, "crashed")
@@ -85,9 +72,7 @@ class TestRunLoop(unittest.TestCase):
         broken = "```python\nraise ValueError('nope')\n```"
         agent = self._agent([broken] * 3)
         agent.max_iterations = 3
-
         result = agent.run("always fails")
-
         self.assertFalse(result.success)
         self.assertEqual(len(result.attempts), 3)
         self.assertTrue(all(a.reason == "crashed" for a in result.attempts))
@@ -96,9 +81,7 @@ class TestRunLoop(unittest.TestCase):
         wrong = "```python\nprint('wrong')\n```"
         right = "```python\nprint('right')\n```"
         agent = self._agent([wrong, right])
-
         result = agent.run("print right", expected_output="right")
-
         self.assertTrue(result.success)
         self.assertEqual(len(result.attempts), 2)
         self.assertEqual(result.attempts[0].reason, "wrong_output")
@@ -108,9 +91,7 @@ class TestRunLoop(unittest.TestCase):
     def test_expected_output_match_succeeds_immediately(self):
         code = "```python\nprint('42')\n```"
         agent = self._agent([code])
-
         result = agent.run("print the answer", expected_output="42")
-
         self.assertTrue(result.success)
         self.assertEqual(len(result.attempts), 1)
 
@@ -119,9 +100,7 @@ class TestRunLoop(unittest.TestCase):
         fixed = "```python\nprint('done')\n```"
         agent = self._agent([infinite_loop, fixed])
         agent.timeout = 1
-
         result = agent.run("loop forever then fix")
-
         self.assertTrue(result.success)
         self.assertEqual(len(result.attempts), 2)
         self.assertIn("TimeoutError", result.attempts[0].stderr)
