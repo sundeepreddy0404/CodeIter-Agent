@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.png" alt="CodeIter logo" width="400">
+</p>
+
 # CodeIter
 
 > write. run. fix. repeat.
