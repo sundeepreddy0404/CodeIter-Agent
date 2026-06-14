@@ -2,17 +2,17 @@
 CLI for CodeIter - shows the write -> run -> fix -> repeat loop live.
 
 Usage:
-    python -m codeiter.cli "write a function that parses this CSV: ..."
-    python -m codeiter.cli "print the first 10 fibonacci numbers" --expect "0 1 1 2 3 5 8 13 21 34"
+    python cli.py "write a function that parses this CSV: ..."
+    python cli.py "print the first 10 fibonacci numbers" --expect "0 1 1 2 3 5 8 13 21 34"
 """
 
 import sys
-from codeiter.agent import CodeIterAgent
+from agent import CodeIterAgent
 
 
 def main():
     if len(sys.argv) < 2:
-        print('Usage: python -m codeiter.cli "<task description>" [--expect "<expected output>"]')
+        print('Usage: python cli.py "<task description>" [--expect "<expected output>"]')
         sys.exit(1)
 
     args = sys.argv[1:]
